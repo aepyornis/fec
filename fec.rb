@@ -88,10 +88,10 @@ end
 def process(table, &block)
   puts "Processing #{table}"
   config = CONFIG.fetch(table)
-  headers = open(config[:header]).read.strip.split(',')
+  headers = URI.open(config[:header]).read.strip.split(',')
 
   CSV.open(config[:csv], "w", headers: headers, write_headers: true) do |csv_file|
-    open(config[:zip]) do |zip_file|
+    URI.open(config[:zip]) do |zip_file|
       stream_lines(zip_file, config[:filename]) do |line|
         if block_given?
           csv_file << block.call(line)
