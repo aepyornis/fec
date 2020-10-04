@@ -5,6 +5,18 @@ class Candidate < ActiveRecord::Base
 
   belongs_to :pcc, foreign_key: 'CAND_PCC', optional: true, class_name: 'Committee'
 
+  def incumbent?
+    attributes['CAND_ICI'] == 'I'
+  end
+
+  def challeneger?
+    attributes['CAND_ICI'] == 'C'
+  end
+
+  def open_seat?
+    attributes['CAND_ICI'] == 'O'
+  end
+
   def self.search(name)
     where 'CAND_NAME LIKE ?', "%#{name}%"
   end
@@ -20,7 +32,6 @@ class Candidate < ActiveRecord::Base
   def self.year(y)
     where 'CAND_ELECTION_YR' => y.to_i.to_s
   end
-
   # state is upcase and abbreviated
   def self.state(st)
     where 'CAND_OFFICE_ST' => st.upcase
