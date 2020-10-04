@@ -7,7 +7,7 @@
 # To the install the requirements on debian:
 #   apt-get install ruby ruby-zip sqlite3
 #
-# The database ends up being over 2gb but all processing is done streaming,
+# The database ends up being over 7gb but all processing is done streaming,
 # and the program should only require a few hundred mb of memory.
 #
 # The database is saved to fec2020.db
