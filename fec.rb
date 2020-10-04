@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'pry'
-
 require 'active_record'
 require 'csv'
+require 'fileutils'
 require 'open-uri'
 require 'optparse'
+require 'zip'
 
 module Fec
 end

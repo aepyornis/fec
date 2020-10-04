@@ -10,6 +10,8 @@ module Fec
       Fec::Database.dbfile = config.dbfile
       Fec::Database.establish_connection if config.import || config.clean
 
+      FileUtils.mkdir_p(File.join(Dir.pwd, 'data')) if config.download
+
       if config.all
         Fec::Downloader.download_all if config.download
         Fec::Importer.import_all if config.import

@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'csv'
-require 'open-uri'
-
 module Fec
   # Using the data in the Fec::TABLES constant, this class downloads
   # and saves two csvs, one for the header and one with the data.
@@ -12,6 +9,7 @@ module Fec
 
     def self.download_all
       Fec::TABLES.keys.each do |table|
+        puts "Downloading #{table}"
         new(table).download
       end
     end
