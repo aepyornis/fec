@@ -13,52 +13,102 @@
 # The database is saved to fec2020.db
 
 require 'csv'
+require 'fileutils'
 require 'open-uri'
 require 'open3'
 require 'zip'
 
+# Structure:
+#
+# table_name:
+#   filename:
+#   documentation:
+#   source:
+#     zip:
+#     header:
+#   output:
+#     data:
+#     header:
+
 CONFIG = {
   expenditures: {
-    header: 'https://www.fec.gov/files/bulk-downloads/data_dictionaries/oppexp_header_file.csv',
-    zip: 'https://www.fec.gov/files/bulk-downloads/2020/oppexp20.zip',
     filename: 'oppexp.txt',
-    csv: File.absolute_path('./expenditures2020.csv')
+    source: {
+      zip: 'https://www.fec.gov/files/bulk-downloads/2020/oppexp20.zip',
+      header: 'https://www.fec.gov/files/bulk-downloads/data_dictionaries/oppexp_header_file.csv'
+    },
+    output: {
+      data: 'data/expenditures2020.csv',
+      header: 'data/expenditures2020_header.csv'
+    }
   },
   committees: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cm_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/cm20.zip",
     filename: 'cm.txt',
-    csv: File.absolute_path('./committees2020.csv')
+    source: {
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/cm20.zip",
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cm_header_file.csv"
+    },
+    output: {
+      data: 'data/committees2020.csv',
+      header: 'data/committees2020_header.csv'
+    }
   },
   candidates: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cn_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/cn20.zip",
     filename: 'cn.txt',
-    csv: File.absolute_path('./candidates2020.csv')
+    source: {
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/cn20.zip",
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cn_header_file.csv"
+    },
+    output: {
+      data: 'data/candidates2020.csv',
+      header: 'data/candidates2020_header.csv'
+    },
+    documentation: "https://www.fec.gov/campaign-finance-data/all-candidates-file-description/"
   },
   linkages: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/ccl_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/ccl20.zip",
     filename: 'ccl.txt',
-    csv: File.absolute_path('./linkages2020.csv')
+    source: {
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/ccl20.zip",
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/ccl_header_file.csv"
+    },
+    output: {
+      data: 'data/linkages2020.csv',
+      header: 'data/linkages2020_header.csv'
+    }
   },
   individual_contributions: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/indiv_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/indiv20.zip",
     filename: 'itcont.txt',
-    csv: File.absolute_path('./individual_contributions2020.csv')
+    source: {
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/indiv20.zip",
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/indiv_header_file.csv"
+    },
+    output: {
+      data: 'data/individual_contributions2020.csv',
+      header: 'data/individual_contributions2020_header.csv'
+    },
+    documentation: "https://www.fec.gov/campaign-finance-data/contributions-individuals-file-description/"
   },
   committee_contributions: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/pas2_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/pas220.zip",
     filename: 'itpas2.txt',
-    csv: File.absolute_path('./committee_contributions2020.csv')
+    source: {
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/pas220.zip",
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/pas2_header_file.csv"
+    },
+    output: {
+      data: 'data/committee_contributions2020.csv',
+      header: 'data/committee_contributions2020_header.csv'
+    }
   },
   transactions: {
-    header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/oth_header_file.csv",
-    zip: "https://www.fec.gov/files/bulk-downloads/2020/oth20.zip",
     filename: 'itoth.txt',
-    csv: File.absolute_path('./transactions2020.csv')
+    source: {
+      header: "https://www.fec.gov/files/bulk-downloads/data_dictionaries/oth_header_file.csv",
+      zip: "https://www.fec.gov/files/bulk-downloads/2020/oth20.zip"
+    },
+    output: {
+      data: 'data/transactions2020.csv',
+      header: 'data/transactions2020_header.csv'
+    }
   }
 }.freeze
 
@@ -79,6 +129,12 @@ def stream_lines(zip_file, entry, &block)
   end
 end
 
+def save_header(table_config)
+  File.open(table_config[:output][:header], 'w') do |f|
+    f.write URI.open(table_config[:source][:header]).read
+  end
+end
+
 # Using the data in the CONFIG constant, this function downloads
 # the header and zip file, opens the correct csv located inside the
 # zip file, parses it, and saves a csv in the current directory.
@@ -86,12 +142,12 @@ end
 # The block is optional. It allows a different line transformation function to be used.
 # By default CSV.parse_line is used with "|" as the column separator and no quote char.
 def process(table, &block)
-  puts "Processing #{table}"
+  puts "Preparing #{table}"
   config = CONFIG.fetch(table)
-  headers = URI.open(config[:header]).read.strip.split(',')
+  save_header(config)
 
-  CSV.open(config[:csv], "w", headers: headers, write_headers: true) do |csv_file|
-    URI.open(config[:zip]) do |zip_file|
+  CSV.open(config[:output][:data], "w") do |csv_file|
+    URI.open(config[:source][:zip]) do |zip_file|
       stream_lines(zip_file, config[:filename]) do |line|
         if block_given?
           csv_file << block.call(line)
@@ -104,11 +160,10 @@ def process(table, &block)
 end
 
 def import_csv(table)
-  puts "Importing #{table}"
+  puts "Loading #{table}"
   db_exec <<~SQL
     .mode csv
-    .header on
-    .import #{CONFIG.fetch(table)[:csv]} #{table}
+    .import #{CONFIG.dig(table, :output, :csv)} #{table}
   SQL
 end
 
@@ -144,7 +199,7 @@ SQL
 
 db_exec <<~SQL
   CREATE TABLE IF NOT EXISTS committees (
-    CMTE_ID TEXT NOT NULL,
+    CMTE_ID TEXT NOT NULL UNIQUE,
     CMTE_NM TEXT,
     TRES_NM TEXT,
     CMTE_ST1 TEXT,
@@ -216,7 +271,7 @@ db_exec <<~SQL
     FILE_NUM TEXT,
     MEMO_CD TEXT,
     MEMO_TEXT TEXT,
-    SUB_ID INTEGER NOT NULL
+    SUB_ID INTEGER NOT NULL UNIQUE
   )
 SQL
 
@@ -243,7 +298,7 @@ db_exec <<~SQL
     FILE_NUM TEXT,
     MEMO_CD TEXT,
     MEMO_TEXT TEXT,
-    SUB_ID INTEGER NOT NULL
+    SUB_ID INTEGER NOT NULL UNIQUE
   )
 SQL
 
@@ -272,6 +327,8 @@ db_exec <<~SQL
     SUB_ID INTEGER NOT NULL UNIQUE
   )
 SQL
+
+FileUtils.mkdir_p 'data'
 
 process(:expenditures) { |line| CSV.parse_line(line, col_sep: '|', quote_char: "\x00")[0..24] }
 process :committees
